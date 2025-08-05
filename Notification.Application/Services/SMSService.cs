@@ -1,52 +1,45 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Options;
 using Notification.Application.Interfaces;
+using Notification.Application.Options;
 using Notification.Domain.Models;
 using RestSharp;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Notification.Application.Services
 {
     public class SMSService : ISMSService
     {
-        private readonly IConfiguration _config;
-        private readonly string _termiiApiKey;
-        private readonly string _sendername;
-        private readonly string _termiiBaseUrl;
-        public SMSService(IConfiguration config)
-        {
-            _termiiApiKey = config["Termii:ApiKey"];
-            _sendername = config["Termii:SenderName"];
-            _termiiBaseUrl = config["Termii:BaseUrl"];
+        private readonly TermiiSettings _settings;
+        private readonly RestClient _client;
 
+        public SMSService(IOptions<TermiiSettings> options)
+        {
+            _settings = options.Value;
+            _client = new RestClient(_settings.BaseUrl);
         }
-        public async Task<bool> SendSms(SMSRequest smsRequest)
-        {
-            var client = new RestClient(_termiiBaseUrl);
 
+        public async Task<bool> SendSmsAsync(SMSRequest smsRequest)
+        {
             var request = new RestRequest("/api/sms/send")
                 .AddHeader("Content-Type", "application/json")
                 .AddJsonBody(new
                 {
                     to = smsRequest.ToPhoneNumber,
-                    from = _sendername,
+                    from = _settings.SenderName,
                     sms = smsRequest.Message,
                     type = "plain",
                     channel = "generic",
-                    api_key = _termiiApiKey
+                    api_key = _settings.ApiKey
                 });
 
-            var response = await client.PostAsync(request);
+            var response = await _client.PostAsync(request);
 
             if (!response.IsSuccessful)
             {
-                throw new Exception("SMS sending failed: " + response.Content);               
+                // You can log here or create a custom exception
+                throw new ApplicationException($"Failed to send SMS: {response.StatusCode} - {response.Content}");
             }
+
             return true;
         }
-
     }
 }

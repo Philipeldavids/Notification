@@ -1,45 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
+﻿using System.Net.Mail;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using Notification.Application.Interfaces;
 using Notification.Domain.Models;
-using Microsoft.Extensions.Configuration;
+using Notification.Application.Options;
+using Microsoft.Extensions.Options;
 
 namespace Notification.Application.Services
 {
     public class EmailService : IEmailService
     {
-        private readonly string smtpHost; // e.g., smtp.gmail.com
-        private readonly int smtpPort;
-        private readonly string smtpUser;
-        private readonly string smtpPass;
+        private readonly SmtpSettings _smtpSettings;
 
-        public EmailService(IConfiguration config)
+        public EmailService(IOptions<SmtpSettings> smtpOptions)
         {
-            smtpHost = config["SMTPMAILSETTINGS:SMTPHOST"];
-            smtpPort = int.Parse(config["SMTPMAILSETTINGS:SMTPPORT"]);
-            smtpUser = config["SMTPMAILSETTINGS:SMTPUSER"];
-            smtpPass = config["SMTPMAILSETTINGS:SMTPPASS"];
+            _smtpSettings = smtpOptions.Value;
         }
-        public async Task<bool> SendEmail(MailRequest mailRequest)
+
+        public async Task<bool> SendEmailAsync(MailRequest request)
         {
-            var message = new MailMessage(smtpUser, mailRequest.ToEmail, mailRequest.Subject, mailRequest.Body)
+            using var client = new SmtpClient
             {
-                IsBodyHtml = true
+                Host = _smtpSettings.Host,
+                Port = _smtpSettings.Port,
+                EnableSsl = true,
+                Timeout=20000,
+                Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password)
             };
 
-            using var client = new SmtpClient(smtpHost, smtpPort)
+            var mail = new MailMessage
             {
-                Credentials = new NetworkCredential(smtpUser, smtpPass),
-                EnableSsl = true
+                From = new MailAddress(_smtpSettings.Username, "SwissPay"),
+                Subject = request.Subject,
+                Body = request.Body,
+                // IsBodyHtml = false
             };
 
-            await client.SendMailAsync(message);
-            return true;
+            mail.To.Add(request.ToEmail);
+            mail.ReplyToList.Add("noreply@swisspay.com");
+
+            try
+            {
+                await client.SendMailAsync(mail);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                Console.WriteLine(ex.Message);
+                return false;
+            }
         }
     }
+
 }
