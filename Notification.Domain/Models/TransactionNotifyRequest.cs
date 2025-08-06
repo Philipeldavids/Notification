@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Notification.Domain.Models
+﻿namespace Notification.Domain.Models
 {
     public class TransactionNotifyRequest
     {
@@ -13,4 +7,5 @@ namespace Notification.Domain.Models
         public string Method { get; set; } // "sms", "email", or "both"
         public string Message { get; set; }
     }
+    
 }

@@ -1,11 +1,6 @@
 ﻿using Notification.Application.Interfaces;
+using Notification.Application.UtilityHelpers;
 using Notification.Domain.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Notification.Application.Services
 {
@@ -19,93 +14,86 @@ namespace Notification.Application.Services
             _emailService = emailService;
             _smsService = smsService;
         }
-        public async Task<bool> SendOtpToUser(MailRequest mailRequest, SMSRequest sMSRequest, string method)
+
+        public async Task<bool> SendOtpAsync(string toEmail)
+        {
+            var otp = OtpGenerator.GenerateNumericOtp();
+
+            var mailRequest = new MailRequest
+            {
+                ToEmail = toEmail,
+                Subject = "VERIFICATION",
+                Body = $"Your OTP is: {otp}"
+            };
+
+            return await _emailService.SendEmailAsync(mailRequest);
+        }
+
+        public async Task<bool> SendOtpToUser(MailRequest mailRequest, SMSRequest smsRequest, string method)
         {
             var otp = OtpGenerator.GenerateNumericOtp();
             var message = $"Your OTP code is: {otp}";
 
             mailRequest.Subject = "Your OTP Code";
             mailRequest.Body = message;
-            sMSRequest.Message = message; 
+            smsRequest.Message = message;
 
-            switch (method)
-            {
-                case "email":
-                   return await _emailService.SendEmail(mailRequest);                    
-
-                case "sms":
-                    return await _smsService.SendSms(sMSRequest);
-                    
-
-                case "both":
-                    await _emailService.SendEmail(mailRequest);
-                    return await _smsService.SendSms(sMSRequest);
-                    
-
-                default:
-                    throw new ArgumentException("Invalid notification method. Use 'sms', 'email', or 'both'.");
-            }
-
-            // Optional: Save OTP with expiration in DB here
+            return await DispatchNotification(method, mailRequest, smsRequest);
         }
 
-        public async Task<bool> SendTransactionNotification(MailRequest mailRequest, SMSRequest sMSRequest, string method, string message)
+        public async Task<bool> SendTransactionNotificationAsync(string toEmail, string message)
         {
-            bool emailSuccess = false, smsSuccess = false;
-            string emailError = null, smsError = null;
-
-            if (method == "email" || method == "both")
+            var mailRequest = new MailRequest
             {
-                mailRequest.Subject = "Transaction Alert";
-                mailRequest.Body = message;
-                try
+                ToEmail = toEmail,
+                Subject = "Transaction Alert",
+                Body = message
+            };
+
+            return await _emailService.SendEmailAsync(mailRequest);
+        }
+
+        public async Task<bool> SendTransactionNotification(MailRequest mailRequest, SMSRequest smsRequest, string method, string message)
+        {
+            mailRequest.Subject = "Transaction Alert";
+            mailRequest.Body = message;
+            smsRequest.Message = message;
+
+            return await DispatchNotification(method, mailRequest, smsRequest);
+        }
+
+        private async Task<bool> DispatchNotification(string method, MailRequest mailRequest, SMSRequest smsRequest)
+        {
+            bool emailSent = false, smsSent = false;
+
+            try
+            {
+                switch (method.ToLower())
                 {
-                    await _emailService.SendEmail(mailRequest);
-                    emailSuccess = true;
-                }
-                catch (Exception ex)
-                {
-                    emailError = ex.Message;
+                    case "email":
+                        emailSent = await _emailService.SendEmailAsync(mailRequest);
+                        break;
+
+                    case "sms":
+                        smsSent = await _smsService.SendSmsAsync(smsRequest);
+                        break;
+
+                    case "both":
+                        emailSent = await _emailService.SendEmailAsync(mailRequest);
+                        smsSent = await _smsService.SendSmsAsync(smsRequest);
+                        break;
+
+                    default:
+                        throw new ArgumentException("Invalid notification method. Use 'email', 'sms', or 'both'.");
                 }
             }
-
-            if (method == "sms" || method == "both")
+            catch (Exception ex)
             {
-                sMSRequest.Message = message;
-                try
-                {
-                    await _smsService.SendSms(sMSRequest);
-                    smsSuccess = true;
-                }
-                catch (Exception ex)
-                {
-                    smsError = ex.Message;
-                }
+                Console.WriteLine($"Notification failed: {ex.Message}");
             }
-
-            // Save log(s)
-            //if (method == "email" || method == "both")
-            //    await SaveTransactionNotification(email, message, "email", emailSuccess, emailError);
-
-            //if (method == "sms" || method == "both")
-            //    await SaveTransactionNotification(phone, message, "sms", smsSuccess, smsError);
-
-            if (!emailSuccess && !smsSuccess)
-                throw new Exception("Both SMS and Email failed.");
+            if (!emailSent && !smsSent)
+                throw new Exception("Both email and SMS failed to send.");
             return true;
-        }
-
-    }
-
-
-    public class OtpGenerator
-    {
-        public static string GenerateNumericOtp(int length = 6)
-        {
-            using var rng = RandomNumberGenerator.Create();
-            var bytes = new byte[length];
-            rng.GetBytes(bytes);
-            return string.Concat(bytes.Select(b => (b % 10).ToString()));
         }
     }
 }
