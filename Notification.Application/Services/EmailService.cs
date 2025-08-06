@@ -50,6 +50,22 @@ namespace Notification.Application.Services
                 return false;
             }
         }
+        public async Task SendBulkEmailsAsync(BulkMailRequest bulkMailRequest)
+        {
+            foreach (var email in bulkMailRequest.Emails)
+            {
+                MailRequest request = new()
+                {
+                    ToEmail = email,
+                    Subject = bulkMailRequest.Subject,
+                    Body = bulkMailRequest.Message
+                };
+                
+                await SendEmailAsync(request);
+            }
+        }
+
     }
+
 
 }

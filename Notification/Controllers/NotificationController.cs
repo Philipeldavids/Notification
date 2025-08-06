@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Mvc;
 using Notification.Application.Interfaces;
 using Notification.Domain.Models;
 
@@ -21,14 +22,14 @@ namespace Notification.Controllers
         /// <param name="request">The email address to send OTP to</param>
         /// <returns></returns>
         [HttpPost("otp")]
-        public async Task<IActionResult> SendOtpAsync([FromBody] OtpEmailRequest request)
+        public async Task<IActionResult> SendOtpAsync([FromBody] UserResponseDto user)
         {
-            if (string.IsNullOrWhiteSpace(request?.Email))
+            if (string.IsNullOrWhiteSpace(user?.Email))
                 return BadRequest(new { error = "Email address is required." });
 
             try
             {
-                var result = await _notificationService.SendOtpAsync(request.Email);
+                var result = await _notificationService.SendOtpAsync(user, "otp_verification_template.html");
                 if (!result)
                     return StatusCode(500, new { error = "Failed to send OTP." });
 
@@ -40,6 +41,46 @@ namespace Notification.Controllers
             }
         }
 
+        [HttpPost("validate-otp")]
+        public IActionResult ValidateOtp([FromBody] OtpValidationRequest request)
+        {
+            var valid = _notificationService.ValidateOtp(request.UserIdentifier, request.Code);
+            if (!valid)
+                return BadRequest("Invalid or expired OTP.");
+
+            return Ok("OTP validated successfully.");
+        }
+
+        [HttpPost("Kyc-limit-alert")]
+        public async Task<IActionResult> SendKycLimitAlert(UserResponseDto user)
+        {
+            if (user == null)
+                return BadRequest(new { error = "User body is missing." });
+
+            if (user.Email == null)
+                return BadRequest(new { error = "Email is Required." });
+
+            try
+            {
+                var result = await _notificationService.SendKycLimitAlert(
+               user,
+                    "kyc_limit_alert_template.html"
+                );
+
+                if (!result)
+                    return StatusCode(500, new { error = "Failed to send kyc-limit notification." });
+
+                return Ok(new { message = "Kyc-limit notification sent successfully." });
+            }
+            catch (ArgumentException argEx)
+            {
+                return BadRequest(new { error = argEx.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
         /// <summary>
         /// Send transaction alert via email, SMS or both
         /// </summary>
@@ -58,10 +99,10 @@ namespace Notification.Controllers
             try
             {
                 var result = await _notificationService.SendTransactionNotification(
-                    request.Mail,
-                    request.Sms,
+                    request.payload,
+                    request.User,
                     request.Method,
-                    request.Message
+                    "transaction_notification_template.html"
                 );
 
                 if (!result)

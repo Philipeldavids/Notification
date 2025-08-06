@@ -1,0 +1,22 @@
+﻿<!-- transaction_notification_template.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Transaction Alert</title>
+</head>
+<body style="font-family: Arial, sans-serif; color: #333;">
+    <h2 style="color: #2196F3;">💳 Transaction Notification</h2>
+    <p>Hi <strong>{{UserName}}</strong>,</p>
+    <p>You have just completed a transaction:</p>
+    <ul>
+        <li><strong>Transaction Type:</strong> {{TransactionType}}</li>
+        <li><strong>Amount:</strong> {{Amount}}</li>
+        <li><strong>Date:</strong> {{Date}}</li>
+        <li><strong>Description:</strong> {{Description}}</li>
+        <li><strong>Balance:</strong> {{Balance}}</li>
+    </ul>
+    <p>Thank you for using SwissPay.</p>
+    <p style="margin-top: 20px;">— The SwissPay Team</p>
+</body>
+</html>
