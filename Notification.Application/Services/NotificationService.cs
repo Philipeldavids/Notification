@@ -72,6 +72,7 @@ namespace Notification.Application.Services
 
             var message = $"Your OTP code is: {otp}. It expires in 5 minutes.";
             smsRequest.Message = message;
+            smsRequest.ToPhoneNumber = user.PhoneNumber;
 
             return await DispatchNotification(method, mailRequest, smsRequest);
         }
@@ -140,6 +141,7 @@ namespace Notification.Application.Services
 
             SMSRequest smsRequest = new();
             smsRequest.Message = $"{payload.TransactionType} {payload.Amount} {payload.Description} {payload.Date} {payload.Balance}";
+            smsRequest.ToPhoneNumber = user.PhoneNumber;
             return await DispatchNotification(method, mailRequest, smsRequest);
         }
 

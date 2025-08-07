@@ -22,14 +22,14 @@ namespace Notification.Controllers
         /// <param name="request">The email address to send OTP to</param>
         /// <returns></returns>
         [HttpPost("otp")]
-        public async Task<IActionResult> SendOtpAsync([FromBody] UserResponseDto user)
+        public async Task<IActionResult> SendOtpAsync([FromBody] UserResponseDto user, string method)
         {
             if (string.IsNullOrWhiteSpace(user?.Email))
                 return BadRequest(new { error = "Email address is required." });
 
             try
             {
-                var result = await _notificationService.SendOtpAsync(user, "otp_verification_template.html");
+                var result = await _notificationService.SendOtpToUser(user, method, "otp_verification_template.html");
                 if (!result)
                     return StatusCode(500, new { error = "Failed to send OTP." });
 
