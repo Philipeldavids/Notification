@@ -53,6 +53,9 @@ namespace Notification.Application.Services
             TextInfo textInfo = new CultureInfo("en-GB", false).TextInfo;
             var userName = textInfo.ToTitleCase(user.FirstName);
 
+            template = template.Replace("{UserName}", $"{userName}");
+            template = template.Replace("{OTP}", $"{otp}");
+
             OtpToken otpToken = new()
             {
                 Code = otp,
