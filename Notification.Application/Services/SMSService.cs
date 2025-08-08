@@ -8,10 +8,10 @@ namespace Notification.Application.Services
 {
     public class SMSService : ISMSService
     {
-        private readonly TermiiSettings _settings;
+        private readonly AfricanstalkingSettings _settings;
         private readonly RestClient _client;
 
-        public SMSService(IOptions<TermiiSettings> options)
+        public SMSService(IOptions<AfricanstalkingSettings> options)
         {
             _settings = options.Value;
             _client = new RestClient(_settings.BaseUrl);
@@ -19,16 +19,17 @@ namespace Notification.Application.Services
 
         public async Task<bool> SendSmsAsync(SMSRequest smsRequest)
         {
-            var request = new RestRequest("/api/sms/send")
+            string[] phoneNumbers = { smsRequest.ToPhoneNumber };
+            
+            var request = new RestRequest("/version1/messaging/bulk")
                 .AddHeader("Content-Type", "application/json")
+                .AddHeader("apiKey", _settings.ApiKey)
                 .AddJsonBody(new
                 {
-                    to = smsRequest.ToPhoneNumber,
-                    from = _settings.SenderName,
-                    sms = smsRequest.Message,
-                    type = "plain",
-                    channel = "generic",
-                    api_key = _settings.ApiKey
+                    phoneNumbers,
+                    userName = _settings.SenderName,
+                    message = smsRequest.Message,
+                    
                 });
 
             var response = await _client.PostAsync(request);

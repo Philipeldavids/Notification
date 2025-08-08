@@ -5,7 +5,7 @@ using Notification.Application.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.Configure<TermiiSettings>(builder.Configuration.GetSection("Termii"));
+builder.Services.Configure<AfricanstalkingSettings>(builder.Configuration.GetSection("Africastalking"));
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SMTPMAILSETTINGS"));
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
